@@ -109,6 +109,22 @@ class DispatchGameOverlayActivatedEventTask : public BaseDispatchEventTask
 		bool fWasActivated;
 };
 
+/** Dispatches a Steam "GetAuthSessionTicketResponse_t" event and its data to Lua. */
+class DispatchGetAuthSessionTicketResponseEventTask : public BaseDispatchEventTask
+{
+public:
+	static const char kLuaEventName[];
+
+	DispatchGetAuthSessionTicketResponseEventTask();
+	virtual ~DispatchGetAuthSessionTicketResponseEventTask();
+
+	void AcquireEventDataFrom(const GetAuthSessionTicketResponse_t& steamEventData);
+	virtual const char* GetLuaEventName() const;
+	virtual bool PushLuaEventTableTo(lua_State* luaStatePointer) const;
+
+private:
+	EResult fResult;
+};
 
 /** Dispatches a Steam "LeaderboardScoresDownloaded_t" event and its data to Lua. */
 class DispatchLeaderboardScoresDownloadedEventTask : public BaseDispatchLeaderboardEventTask

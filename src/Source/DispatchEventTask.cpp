@@ -166,6 +166,49 @@ bool DispatchGameOverlayActivatedEventTask::PushLuaEventTableTo(lua_State* luaSt
 
 
 //---------------------------------------------------------------------------------
+// DispatchGameOverlayActivatedEventTask Class Members
+//---------------------------------------------------------------------------------
+
+const char DispatchGetAuthSessionTicketResponseEventTask::kLuaEventName[] = "authSessionTicketResponse";
+
+DispatchGetAuthSessionTicketResponseEventTask::DispatchGetAuthSessionTicketResponseEventTask()
+: fResult(k_EResultFail)
+{
+}
+
+DispatchGetAuthSessionTicketResponseEventTask::~DispatchGetAuthSessionTicketResponseEventTask()
+{
+}
+
+void DispatchGetAuthSessionTicketResponseEventTask::AcquireEventDataFrom(const GetAuthSessionTicketResponse_t& steamEventData)
+{
+	fResult = steamEventData.m_eResult;
+}
+
+const char* DispatchGetAuthSessionTicketResponseEventTask::GetLuaEventName() const
+{
+	return kLuaEventName;
+}
+
+bool DispatchGetAuthSessionTicketResponseEventTask::PushLuaEventTableTo(lua_State* luaStatePointer) const
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return false;
+	}
+
+	// Push the event data to Lua.
+	CoronaLuaNewEvent(luaStatePointer, kLuaEventName);
+	lua_pushboolean(luaStatePointer, fResult != k_EResultOK);
+	lua_setfield(luaStatePointer, -2, "isError");
+	lua_pushinteger(luaStatePointer, fResult);
+	lua_setfield(luaStatePointer, -2, "result");
+	return true;
+}
+
+
+//---------------------------------------------------------------------------------
 // DispatchLeaderboardScoresDownloadedEventTask Class Members
 //---------------------------------------------------------------------------------
 

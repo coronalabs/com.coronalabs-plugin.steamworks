@@ -341,6 +341,11 @@ void RuntimeContext::OnSteamGameOverlayActivated(GameOverlayActivated_t* eventDa
 	OnHandleGlobalSteamEvent<GameOverlayActivated_t, DispatchGameOverlayActivatedEventTask>(eventDataPointer);
 }
 
+void RuntimeContext::OnGetAuthSessionTicketResponse(GetAuthSessionTicketResponse_t* eventDataPointer)
+{
+	OnHandleGlobalSteamEvent<GetAuthSessionTicketResponse_t, DispatchGetAuthSessionTicketResponseEventTask>(eventDataPointer);
+}
+
 void RuntimeContext::OnSteamMicrotransactionAuthorizationReceived(MicroTxnAuthorizationResponse_t* eventDataPointer)
 {
 	OnHandleGlobalSteamEvent<

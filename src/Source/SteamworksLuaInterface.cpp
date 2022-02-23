@@ -797,11 +797,9 @@ int OnGetAuthSessionTicket(lua_State* luaStatePointer)
 	uint32 unTokenLen = 0;
 	HAuthTicket ticket = steamUserPointer->GetAuthSessionTicket( rgchToken, sizeof( rgchToken ), &unTokenLen );
 
-	if(ticket != k_HAuthTicketInvalid && *rgchToken && unTokenLen > 0) {
+	if(ticket != k_HAuthTicketInvalid && *rgchToken && unTokenLen > 0) 
+	{
 		lua_pushlstring(luaStatePointer, rgchToken, unTokenLen);
-		bool wasSuccessful = contextPointer->AddEventHandlerFor
-			<LeaderboardScoreUploaded_t, DispatchLeaderboardScoreUploadEventTask>(settings);
-
 	} else {
 		lua_pushnil(luaStatePointer);
 	}
