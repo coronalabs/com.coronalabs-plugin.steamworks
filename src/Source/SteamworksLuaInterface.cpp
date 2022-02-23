@@ -776,6 +776,38 @@ int OnGetUserInfo(lua_State* luaStatePointer)
 	return 1;
 }
 
+/** UserInfo steamworks.getAuthSessionTicket() */
+int OnGetAuthSessionTicket(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch the Steam interfaces needed by this API call.
+	auto steamUserPointer = SteamUser();
+	if (!steamUserPointer)
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	char rgchToken[4096] = {0};
+	uint32 unTokenLen = 0;
+	HAuthTicket ticket = steamUserPointer->GetAuthSessionTicket( rgchToken, sizeof( rgchToken ), &unTokenLen );
+
+	if(ticket != k_HAuthTicketInvalid && *rgchToken && unTokenLen > 0) {
+		lua_pushlstring(luaStatePointer, rgchToken, unTokenLen);
+		bool wasSuccessful = contextPointer->AddEventHandlerFor
+			<LeaderboardScoreUploaded_t, DispatchLeaderboardScoreUploadEventTask>(settings);
+
+	} else {
+		lua_pushnil(luaStatePointer);
+	}
+
+	return 1;
+}
 /** number/nil steamworks.getUserStatValue({statName="", type="", [userSteamId=""]) */
 int OnGetUserStatValue(lua_State* luaStatePointer)
 {
@@ -3112,6 +3144,7 @@ CORONA_EXPORT int luaopen_plugin_steamworks(lua_State* luaStatePointer)
 		const struct luaL_Reg luaFunctions[] =
 		{
 			{ "getAchievementImageInfo", OnGetAchievementImageInfo },
+			{ "getAuthSessionTicket", OnGetAuthSessionTicket },
 			{ "getAchievementInfo", OnGetAchievementInfo },
 			{ "getAchievementNames", OnGetAchievementNames },
 			{ "getUserImageInfo", OnGetUserImageInfo },
