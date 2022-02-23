@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <set>
 PLUGIN_DISABLE_STEAM_WARNINGS_BEGIN
 #	include "steam_api.h"
 PLUGIN_DISABLE_STEAM_WARNINGS_END
@@ -184,6 +185,9 @@ class RuntimeContext
 		 */
 		static int GetInstanceCount();
 
+		/** Adds auth ticket to cancel queue */
+		void AddAuthTicket(HAuthTicket ticket);
+
 	private:
 		/** Copy constructor deleted to prevent it from being called. */
 		RuntimeContext(const RuntimeContext&) = delete;
@@ -232,6 +236,7 @@ class RuntimeContext
 		/** Set up global Steam event handlers via their macros. */
 		STEAM_CALLBACK(RuntimeContext, OnSteamAvatarImageLoaded, AvatarImageLoaded_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamGameOverlayActivated, GameOverlayActivated_t);
+		STEAM_CALLBACK(RuntimeContext, OnGetAuthSessionTicketResponse, GetAuthSessionTicketResponse_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamMicrotransactionAuthorizationReceived, MicroTxnAuthorizationResponse_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamPersonaStateChanged, PersonaStateChange_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamUserAchievementIconFetched, UserAchievementIconFetched_t);
@@ -272,6 +277,9 @@ class RuntimeContext
 
 		/** Stores a collection of Steam user IDs (in integer form) that are subscribed to large avatars. */
 		std::unordered_set<uint64> fLargeAvatarSubscribedUserIdSet;
+
+		/** set of auth tickets to be destroyed **/
+		std::set<HAuthTicket> fAuthTickets;
 
 		/** Set true if we need to force Corona to render on the next "enterFrame" event. */
 		bool fWasRenderRequested;

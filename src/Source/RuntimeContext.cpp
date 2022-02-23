@@ -68,6 +68,15 @@ RuntimeContext::~RuntimeContext()
 		}
 	}
 
+	auto steamUser = SteamUser();
+	if (steamUser != nullptr)
+	{
+		for (auto authTicket : fAuthTickets)
+		{
+			steamUser->CancelAuthTicket(authTicket);
+		}
+	}
+
 	// Remove this class instance from the global collection.
 	sRuntimeContextCollection.erase(this);
 }
@@ -79,6 +88,14 @@ lua_State* RuntimeContext::GetMainLuaState() const
 		return fLuaEventDispatcherPointer->GetLuaState();
 	}
 	return nullptr;
+}
+
+void RuntimeContext::AddAuthTicket(HAuthTicket ticket)
+{
+	if (ticket != k_HAuthTicketInvalid)
+	{
+		fAuthTickets.insert(ticket);
+	}
 }
 
 std::shared_ptr<LuaEventDispatcher> RuntimeContext::GetLuaEventDispatcher() const
@@ -339,6 +356,11 @@ void RuntimeContext::OnSteamAvatarImageLoaded(AvatarImageLoaded_t* eventDataPoin
 void RuntimeContext::OnSteamGameOverlayActivated(GameOverlayActivated_t* eventDataPointer)
 {
 	OnHandleGlobalSteamEvent<GameOverlayActivated_t, DispatchGameOverlayActivatedEventTask>(eventDataPointer);
+}
+
+void RuntimeContext::OnGetAuthSessionTicketResponse(GetAuthSessionTicketResponse_t* eventDataPointer)
+{
+	OnHandleGlobalSteamEvent<GetAuthSessionTicketResponse_t, DispatchGetAuthSessionTicketResponseEventTask>(eventDataPointer);
 }
 
 void RuntimeContext::OnSteamMicrotransactionAuthorizationReceived(MicroTxnAuthorizationResponse_t* eventDataPointer)
