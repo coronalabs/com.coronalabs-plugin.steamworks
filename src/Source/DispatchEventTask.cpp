@@ -166,7 +166,7 @@ bool DispatchGameOverlayActivatedEventTask::PushLuaEventTableTo(lua_State* luaSt
 
 
 //---------------------------------------------------------------------------------
-// DispatchGameOverlayActivatedEventTask Class Members
+// DispatchGetAuthSessionTicketResponseEventTask Class Members
 //---------------------------------------------------------------------------------
 
 const char DispatchGetAuthSessionTicketResponseEventTask::kLuaEventName[] = "authSessionTicketResponse";
@@ -203,7 +203,7 @@ bool DispatchGetAuthSessionTicketResponseEventTask::PushLuaEventTableTo(lua_Stat
 	lua_pushboolean(luaStatePointer, fResult != k_EResultOK);
 	lua_setfield(luaStatePointer, -2, "isError");
 	lua_pushinteger(luaStatePointer, fResult);
-	lua_setfield(luaStatePointer, -2, "result");
+	lua_setfield(luaStatePointer, -2, "resultCode");
 	return true;
 }
 

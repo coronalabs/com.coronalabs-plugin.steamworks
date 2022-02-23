@@ -785,6 +785,14 @@ int OnGetAuthSessionTicket(lua_State* luaStatePointer)
 		return 0;
 	}
 
+	// Fetch this plugin's runtime context associated with the calling Lua state.
+	auto contextPointer = (RuntimeContext*)lua_touserdata(luaStatePointer, lua_upvalueindex(1));
+	if (!contextPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
 	// Fetch the Steam interfaces needed by this API call.
 	auto steamUserPointer = SteamUser();
 	if (!steamUserPointer)
@@ -799,6 +807,7 @@ int OnGetAuthSessionTicket(lua_State* luaStatePointer)
 
 	if(ticket != k_HAuthTicketInvalid && *rgchToken && unTokenLen > 0) 
 	{
+		contextPointer->AddAuthTicket(ticket);
 		lua_pushlstring(luaStatePointer, rgchToken, unTokenLen);
 	} else {
 		lua_pushnil(luaStatePointer);

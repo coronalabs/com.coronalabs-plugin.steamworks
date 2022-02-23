@@ -68,6 +68,15 @@ RuntimeContext::~RuntimeContext()
 		}
 	}
 
+	auto steamUser = SteamUser();
+	if (steamUser != nullptr)
+	{
+		for (auto authTicket : fAuthTickets)
+		{
+			steamUser->CancelAuthTicket(authTicket);
+		}
+	}
+
 	// Remove this class instance from the global collection.
 	sRuntimeContextCollection.erase(this);
 }
@@ -79,6 +88,14 @@ lua_State* RuntimeContext::GetMainLuaState() const
 		return fLuaEventDispatcherPointer->GetLuaState();
 	}
 	return nullptr;
+}
+
+void RuntimeContext::AddAuthTicket(HAuthTicket ticket)
+{
+	if (ticket != k_HAuthTicketInvalid)
+	{
+		fAuthTickets.insert(ticket);
+	}
 }
 
 std::shared_ptr<LuaEventDispatcher> RuntimeContext::GetLuaEventDispatcher() const
