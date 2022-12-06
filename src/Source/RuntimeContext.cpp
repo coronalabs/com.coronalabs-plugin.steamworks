@@ -11,6 +11,7 @@
 #include "CoronaLua.h"
 #include "DispatchEventTask.h"
 #include "SteamCallResultHandler.h"
+#include <windows.h>
 #include <exception>
 #include <memory>
 #include <unordered_set>
@@ -26,7 +27,8 @@ static std::unordered_set<RuntimeContext*> sRuntimeContextCollection;
 
 RuntimeContext::RuntimeContext(lua_State* luaStatePointer)
 :	fLuaEnterFrameCallback(this, &RuntimeContext::OnCoronaEnterFrame, luaStatePointer),
-	fWasRenderRequested(false)
+	fWasRenderRequested(false),
+	fIsProton(false)
 {
 	// Validate.
 	if (!luaStatePointer)
@@ -40,6 +42,17 @@ RuntimeContext::RuntimeContext(lua_State* luaStatePointer)
 		if (mainLuaStatePointer && (mainLuaStatePointer != luaStatePointer))
 		{
 			luaStatePointer = mainLuaStatePointer;
+		}
+	}
+
+	// Try to detect Steam Deck and set defaultWindowMode to "fullScreen" when detected
+	HMODULE hntdll = GetModuleHandle(L"ntdll.dll");
+	if (hntdll)
+	{
+		FARPROC pwine_get_version = GetProcAddress(hntdll, "wine_get_version");
+		if (pwine_get_version)
+		{
+			fIsProton = true;
 		}
 	}
 
@@ -229,8 +242,14 @@ int RuntimeContext::OnCoronaEnterFrame(lua_State* luaStatePointer)
 
 	// If Steam's overlay needs to be rendered, then force Corona to render the next frame.
 	// We need to do this because Steam renders its overlay by hooking into the OpenGL/Direct3D rendering process.
-	auto steamUtilsPointer = SteamUtils();
-	bool isSteamShowingOverlay = (steamUtilsPointer && steamUtilsPointer->BOverlayNeedsPresent());
+	// Warning: BOverlayNeedsPresent() causes an FPS drop after ~130.000 executions when plugin is loaded in Proton
+	// so prevent that call and always force render when Proton is detected
+	bool isSteamShowingOverlay = true;
+	if (!fIsProton) {
+		auto steamUtilsPointer = SteamUtils();
+		isSteamShowingOverlay = (steamUtilsPointer && steamUtilsPointer->BOverlayNeedsPresent());
+	}
+
 	if (isSteamShowingOverlay || fWasRenderRequested)
 	{
 		// We can force Corona to render the next frame by toggling the Lua stage object's visibility state.

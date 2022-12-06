@@ -283,6 +283,9 @@ class RuntimeContext
 
 		/** Set true if we need to force Corona to render on the next "enterFrame" event. */
 		bool fWasRenderRequested;
+
+		/** Set true if dll is loaded by Proton/Wine. */
+		bool fIsProton;
 };
 
 
