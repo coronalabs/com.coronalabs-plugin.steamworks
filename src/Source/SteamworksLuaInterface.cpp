@@ -777,44 +777,50 @@ int OnGetUserInfo(lua_State* luaStatePointer)
 }
 
 /** UserInfo steamworks.getAuthSessionTicket() */
-int OnGetAuthSessionTicket(lua_State* luaStatePointer)
+int OnGetAuthSessionTicket(lua_State* L)
 {
-	// Validate.
-	if (!luaStatePointer)
-	{
-		return 0;
-	}
+    if (!L)
+        return 0;
 
-	// Fetch this plugin's runtime context associated with the calling Lua state.
-	auto contextPointer = (RuntimeContext*)lua_touserdata(luaStatePointer, lua_upvalueindex(1));
-	if (!contextPointer)
-	{
-		lua_pushboolean(luaStatePointer, 0);
-		return 1;
-	}
+    auto contextPointer = (RuntimeContext*)lua_touserdata(L, lua_upvalueindex(1));
+    if (!contextPointer)
+    {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
 
-	// Fetch the Steam interfaces needed by this API call.
-	auto steamUserPointer = SteamUser();
-	if (!steamUserPointer)
-	{
-		lua_pushnil(luaStatePointer);
-		return 1;
-	}
+    auto steamUserPointer = SteamUser();
+    if (!steamUserPointer)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
 
-	char rgchToken[4096] = {0};
-	uint32 unTokenLen = 0;
-	HAuthTicket ticket = steamUserPointer->GetAuthSessionTicket( rgchToken, sizeof( rgchToken ), &unTokenLen );
+    uint8 buffer[4096] = {0};
+    uint32 ticketSize = 0;
 
-	if(ticket != k_HAuthTicketInvalid && *rgchToken && unTokenLen > 0) 
-	{
-		contextPointer->AddAuthTicket(ticket);
-		lua_pushlstring(luaStatePointer, rgchToken, unTokenLen);
-	} else {
-		lua_pushnil(luaStatePointer);
-	}
+    // Pass nullptr for the optional SteamNetworkingIdentity parameter
+    HAuthTicket ticket = steamUserPointer->GetAuthSessionTicket(
+        static_cast<void*>(buffer),
+        static_cast<int>(sizeof(buffer)),
+        &ticketSize,
+        nullptr  // optional remote identity
+    );
 
-	return 1;
+    if (ticket != k_HAuthTicketInvalid && ticketSize > 0)
+    {
+        contextPointer->AddAuthTicket(ticket);
+        lua_pushlstring(L, reinterpret_cast<const char*>(buffer), ticketSize);
+    }
+    else
+    {
+        lua_pushnil(L);
+    }
+
+    return 1;
 }
+
+
 /** number/nil steamworks.getUserStatValue({statName="", type="", [userSteamId=""]) */
 int OnGetUserStatValue(lua_State* luaStatePointer)
 {
@@ -2026,76 +2032,53 @@ int OnRequestSetHighScore(lua_State* luaStatePointer)
 }
 
 /** bool steamworks.requestUserProgress([userSteamId]) */
-int OnRequestUserProgress(lua_State* luaStatePointer)
+int OnRequestUserProgress(lua_State* L)
 {
-	// Validate.
-	if (!luaStatePointer)
-	{
-		return 0;
-	}
+    if (!L)
+        return 0;
 
-	// Fetch the optional steam ID of the user.
-	CSteamID userSteamId;
-	{
-		const char* userStringId = nullptr;
-		const auto luaArgumentType = lua_type(luaStatePointer, 1);
-		if (luaArgumentType == LUA_TSTRING)
-		{
-			userStringId = lua_tostring(luaStatePointer, 1);
-		}
-		else if ((luaArgumentType != LUA_TNONE) && (luaArgumentType != LUA_TNIL))
-		{
-			CoronaLuaError(luaStatePointer, "Argument (userSteamId) is not of type string.");
-			lua_pushnil(luaStatePointer);
-			return 1;
-		}
-		if (userStringId)
-		{
-			uint64 integerId = 0;
-			std::stringstream stringStream;
-			stringStream.imbue(std::locale::classic());
-			stringStream << userStringId;
-			stringStream >> integerId;
-			if (!stringStream.fail())
-			{
-				userSteamId.SetFromUint64(integerId);
-			}
-			if (userSteamId.IsValid() == false)
-			{
-				CoronaLuaError(luaStatePointer, "Given user ID is invalid: '%s'", userStringId);
-				lua_pushnil(luaStatePointer);
-				return 1;
-			}
-		}
-	}
+    CSteamID userSteamId;
+    if (lua_type(L, 1) == LUA_TSTRING)
+    {
+        const char* userStringId = lua_tostring(L, 1);
+        uint64 integerId = 0;
+        std::stringstream ss(userStringId);
+        ss.imbue(std::locale::classic());
+        ss >> integerId;
+        if (!ss.fail())
+        {
+            userSteamId.SetFromUint64(integerId);
+        }
+        if (!userSteamId.IsValid())
+        {
+            CoronaLuaError(L, "Given user ID is invalid: '%s'", userStringId);
+            lua_pushnil(L);
+            return 1;
+        }
+    }
 
-	// Fetch the Steam interface needed by this API call.
-	// Note: Will return null if Steam client is not currently running.
-	auto steamUserStatsPointer = SteamUserStats();
-	if (!steamUserStatsPointer)
-	{
-		lua_pushboolean(luaStatePointer, 0);
-		return 1;
-	}
+    auto userStats = SteamUserStats();
+    auto steamUser = SteamUser();
+    if (!userStats || !steamUser)
+    {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
 
-	// Request user stats and achievement info.
-	// Plugin will dispatch global "userProgressUpdate" event to Lua when a response has been received.
-	bool wasSuccessful;
-	if (userSteamId.IsValid())
-	{
-		// Request data for the given user ID.
-		// Note: We can ignore the returned call result handle since the RuntimeContext's
-		//       global "UserStatsReceived_t" event handler can receive this request's data.
-		auto resultHandle = steamUserStatsPointer->RequestUserStats(userSteamId);
-		wasSuccessful = (resultHandle != k_uAPICallInvalid);
-	}
-	else
-	{
-		// Request data for the currently logged in user.
-		wasSuccessful = steamUserStatsPointer->RequestCurrentStats();
-	}
-	lua_pushboolean(luaStatePointer, wasSuccessful ? 1 : 0);
-	return 1;
+    bool wasSuccessful = false;
+    if (userSteamId.IsValid())
+    {
+        wasSuccessful = (userStats->RequestUserStats(userSteamId) != k_uAPICallInvalid);
+    }
+    else
+    {
+        // Use local user SteamID instead of RequestCurrentStats()
+        CSteamID localID = steamUser->GetSteamID();
+        wasSuccessful = (userStats->RequestUserStats(localID) != k_uAPICallInvalid);
+    }
+
+    lua_pushboolean(L, wasSuccessful ? 1 : 0);
+    return 1;
 }
 
 /** bool steamworks.resetUserProgress() */
@@ -3080,6 +3063,127 @@ int OnAssigningField(lua_State* luaStatePointer)
 	return 0;
 }
 
+
+int OnWriteFile(lua_State* L) {
+    if (lua_type(L, 1) != LUA_TSTRING || lua_type(L, 2) != LUA_TSTRING) {
+        CoronaLuaError(L, "Usage: steamworks.writeFile(filename, data)");
+        return 0;
+    }
+
+    const char* filename = lua_tostring(L, 1);
+    size_t dataLen;
+    const char* data = lua_tolstring(L, 2, &dataLen);
+
+    auto remoteStorage = SteamRemoteStorage();
+    bool success = false;
+
+    if (remoteStorage) {
+        success = remoteStorage->FileWrite(filename, data, (int)dataLen);
+    }
+
+    lua_pushboolean(L, success);
+    return 1;
+}
+
+/** steamworks.readFile(filename) */
+int OnReadFile(lua_State* L) {
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        CoronaLuaError(L, "Usage: steamworks.readFile(filename)");
+        return 0;
+    }
+
+    const char* filename = lua_tostring(L, 1);
+    auto remoteStorage = SteamRemoteStorage();
+
+    if (!remoteStorage || !remoteStorage->FileExists(filename)) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    int32 fileSize = remoteStorage->GetFileSize(filename);
+    if (fileSize <= 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    std::vector<char> buffer(fileSize);
+    int32 bytesRead = remoteStorage->FileRead(filename, buffer.data(), fileSize);
+
+    if (bytesRead > 0) {
+        lua_pushlstring(L, buffer.data(), bytesRead);
+    } else {
+        lua_pushnil(L);
+    }
+
+    return 1;
+}
+
+/** steamworks.fileExists(filename) */
+int OnFileExists(lua_State* L) {
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        CoronaLuaError(L, "Usage: steamworks.fileExists(filename)");
+        return 0;
+    }
+
+    const char* filename = lua_tostring(L, 1);
+    auto remoteStorage = SteamRemoteStorage();
+    bool exists = (remoteStorage && remoteStorage->FileExists(filename));
+
+    lua_pushboolean(L, exists);
+    return 1;
+}
+
+/** steamworks.deleteFile(filename) */
+int OnDeleteFile(lua_State* L) {
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        CoronaLuaError(L, "Usage: steamworks.deleteFile(filename)");
+        return 0;
+    }
+
+    const char* filename = lua_tostring(L, 1);
+    auto remoteStorage = SteamRemoteStorage();
+    bool success = (remoteStorage && remoteStorage->FileDelete(filename));
+
+    lua_pushboolean(L, success);
+    return 1;
+}
+
+int OnGetUserStorage(lua_State* L) {
+    auto remoteStorage = SteamRemoteStorage();
+    if (!remoteStorage) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    uint64 totalBytes = 0;
+    uint64 availableBytes = 0;
+    bool success = remoteStorage->GetQuota(&totalBytes, &availableBytes);
+
+    if (!success) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_createtable(L, 0, 2);
+    lua_pushinteger(L, (lua_Integer)totalBytes);
+    lua_setfield(L, -2, "totalBytes");
+
+    lua_pushinteger(L, (lua_Integer)availableBytes);
+    lua_setfield(L, -2, "availableBytes");
+
+    return 1;
+}
+int OnIsSteamDeck(lua_State* L) {
+    auto utils = SteamUtils();
+    if (!utils) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    bool isDeck = utils->IsSteamRunningOnSteamDeck();
+    lua_pushboolean(L, isDeck ? 1 : 0);
+    return 1;
+}
 /**
   Called when the Lua plugin table is being destroyed.
   Expected to happen when the Lua runtime is being terminated.
@@ -3177,6 +3281,14 @@ CORONA_EXPORT int luaopen_plugin_steamworks(lua_State* luaStatePointer)
 			{ "isDlcInstalled", OnIsDlcInstalled },
 			{ "addEventListener", OnAddEventListener },
 			{ "removeEventListener", OnRemoveEventListener },
+            
+            { "writeFile", OnWriteFile },
+            { "readFile", OnReadFile },
+            { "fileExists", OnFileExists },
+            { "deleteFile", OnDeleteFile },
+            { "getUserStorage", OnGetUserStorage },
+            { "isSteamDeck", OnIsSteamDeck },
+            
 			{ nullptr, nullptr }
 		};
 		lua_createtable(luaStatePointer, 0, 0);
@@ -3339,10 +3451,15 @@ CORONA_EXPORT int luaopen_plugin_steamworks(lua_State* luaStatePointer)
 
 	// Request the current logged in user's stats and achievement info.
 	auto steamUserStatsPointer = SteamUserStats();
-	if (steamUserStatsPointer)
-	{
-		steamUserStatsPointer->RequestCurrentStats();
-	}
+    if (steamUserStatsPointer)
+    {
+        auto steamUser = SteamUser();
+        if (steamUser)
+        {
+            CSteamID localID = steamUser->GetSteamID();
+            steamUserStatsPointer->RequestUserStats(localID);
+        }
+    }
 
 	// We're returning 1 Lua plugin table.
 	return 1;

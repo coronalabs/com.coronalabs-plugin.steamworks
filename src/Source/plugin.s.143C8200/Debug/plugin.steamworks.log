@@ -1,0 +1,16 @@
+﻿  DispatchEventTask.cpp
+  BaseSteamCallResultHandler.cpp
+  LuaEventDispatcher.cpp
+  PluginConfigLuaSettings.cpp
+  RuntimeContext.cpp
+  SteamImageInfo.cpp
+  SteamStatValueType.cpp
+  SteamImageWrapper.cpp
+  SteamUserImageType.cpp
+  SteamworksLuaInterface.cpp
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\process.h(48,26): error C2375: 'lua_wsystem': redefinition; different linkage
+  (compiling source file 'SteamworksLuaInterface.cpp')
+      \\mac\Home\Desktop\com.coronalabs-plugin.steamworks\src\Dependencies\Corona\shared\include\lua\luaconf.h(839,14):
+      see declaration of 'lua_wsystem'
+  
+  Generating Code...

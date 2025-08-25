@@ -1,0 +1,18 @@
+﻿  DispatchEventTask.cpp
+  BaseSteamCallResultHandler.cpp
+  LuaEventDispatcher.cpp
+  PluginConfigLuaSettings.cpp
+  RuntimeContext.cpp
+  SteamImageInfo.cpp
+  SteamStatValueType.cpp
+  SteamImageWrapper.cpp
+  SteamUserImageType.cpp
+  SteamworksLuaInterface.cpp
+     Creating library \\Mac\Home\Desktop\com.coronalabs-plugin.steamworks\src\Source\Release\plugin.steamworks.lib and object \\Mac\Home\Desktop\com.coronalabs-plugin.steamworks\src\Source\Release\plugin.steamworks.exp
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 2011 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  plugin.steamworks.vcxproj -> \\Mac\Home\Desktop\com.coronalabs-plugin.steamworks\src\Source\Release\plugin.steamworks.dll
+          1 file(s) copied.
+          1 file(s) copied.

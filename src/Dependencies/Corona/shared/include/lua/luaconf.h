@@ -836,7 +836,7 @@ union luai_Cast { double l_d; long l_l; };
 	LUA_API int lua_wchdir(const char *directoryName);
 	LUA_API char* lua_wgetcwd(char *buffer, int maxLength);
 	LUA_API int lua_wstati64(const char *path, struct _stati64 *buffer);
-	LUA_API int lua_wsystem(const char *command);
+	LUA_API int lua_wsystems(const char *command);
 	#ifndef system
 		#define system(command) lua_wsystem(command)
 	#endif
