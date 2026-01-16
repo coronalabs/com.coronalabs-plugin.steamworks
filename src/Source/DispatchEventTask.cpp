@@ -624,6 +624,59 @@ bool DispatchMicrotransactionAuthorizationResponseEventTask::PushLuaEventTableTo
 
 
 //---------------------------------------------------------------------------------
+// DispatchInventoryResultReadyEventTask Class Members
+//---------------------------------------------------------------------------------
+
+const char DispatchInventoryResultReadyEventTask::kLuaEventName[] = "inventoryResultReady";
+
+DispatchInventoryResultReadyEventTask::DispatchInventoryResultReadyEventTask()
+:	fResultHandle(k_SteamInventoryResultInvalid),
+	fResultCode(k_EResultFail)
+{
+}
+
+DispatchInventoryResultReadyEventTask::~DispatchInventoryResultReadyEventTask()
+{
+}
+
+void DispatchInventoryResultReadyEventTask::AcquireEventDataFrom(const SteamInventoryResultReady_t& steamEventData)
+{
+	fResultHandle = steamEventData.m_handle;
+	fResultCode = steamEventData.m_result;
+}
+
+const char* DispatchInventoryResultReadyEventTask::GetLuaEventName() const
+{
+	return kLuaEventName;
+}
+
+bool DispatchInventoryResultReadyEventTask::PushLuaEventTableTo(lua_State* luaStatePointer) const
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return false;
+	}
+
+	// Push the event data to Lua.
+	CoronaLuaNewEvent(luaStatePointer, kLuaEventName);
+	{
+		lua_pushinteger(luaStatePointer, fResultHandle);
+		lua_setfield(luaStatePointer, -2, "resultHandle");
+	}
+	{
+		lua_pushboolean(luaStatePointer, (fResultCode != k_EResultOK) ? 1 : 0);
+		lua_setfield(luaStatePointer, -2, "isError");
+	}
+	{
+		lua_pushinteger(luaStatePointer, fResultCode);
+		lua_setfield(luaStatePointer, -2, "resultCode");
+	}
+	return true;
+}
+
+
+//---------------------------------------------------------------------------------
 // DispatchNumberOfCurrentPlayersEventTask Class Members
 //---------------------------------------------------------------------------------
 

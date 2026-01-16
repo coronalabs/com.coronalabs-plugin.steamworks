@@ -83,6 +83,18 @@ application =
 
 #### [steamworks.requestActivePlayerCount()][plugin.steamworks.requestActivePlayerCount]
 
+#### [steamworks.triggerItemDrop()][plugin.steamworks.triggerItemDrop]
+
+#### [steamworks.getAllItems()][plugin.steamworks.getAllItems]
+
+#### [steamworks.getItemsByID()][plugin.steamworks.getItemsByID]
+
+#### [steamworks.getInventoryResultItems()][plugin.steamworks.getInventoryResultItems]
+
+#### [steamworks.getResultItemProperty()][plugin.steamworks.getResultItemProperty]
+
+#### [steamworks.destroyInventoryResult()][plugin.steamworks.destroyInventoryResult]
+
 #### [steamworks.requestLeaderboardEntries()][plugin.steamworks.requestLeaderboardEntries]
 
 #### [steamworks.requestLeaderboardInfo()][plugin.steamworks.requestLeaderboardInfo]
@@ -132,6 +144,8 @@ application =
 #### [achievementInfoUpdate][plugin.steamworks.event.achievementInfoUpdate]
 
 #### [activePlayerCount][plugin.steamworks.event.activePlayerCount]
+
+#### [inventoryResultReady][plugin.steamworks.event.inventoryResultReady]
 
 #### [leaderboardEntries][plugin.steamworks.event.leaderboardEntries]
 

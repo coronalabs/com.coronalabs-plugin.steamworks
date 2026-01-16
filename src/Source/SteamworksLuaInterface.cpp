@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <string>
 #include <thread>
+#include <vector>
 extern "C"
 {
 #	include "lua.h"
@@ -1236,6 +1237,443 @@ int OnRequestActivePlayerCount(lua_State* luaStatePointer)
 
 	// Return true to Lua if the above async operation was successfully started/executed.
 	lua_pushboolean(luaStatePointer, wasSuccessful ? 1 : 0);
+	return 1;
+}
+
+/** bool steamworks.triggerItemDrop(dropListDefinition, [listener]) */
+int OnTriggerItemDrop(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch this plugin's runtime context associated with the calling Lua state.
+	auto contextPointer = (RuntimeContext*)lua_touserdata(luaStatePointer, lua_upvalueindex(1));
+	if (!contextPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the drop list definition argument.
+	if (lua_type(luaStatePointer, 1) != LUA_TNUMBER)
+	{
+		CoronaLuaError(luaStatePointer, "1st argument must be a numeric 'dropListDefinition'.");
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+	auto dropListDefinition = (SteamItemDef_t)lua_tointeger(luaStatePointer, 1);
+
+	// Fetch the optional listener function.
+	int luaListenerStackIndex = 0;
+	if (lua_gettop(luaStatePointer) >= 2)
+	{
+		if (lua_isfunction(luaStatePointer, 2))
+		{
+			luaListenerStackIndex = 2;
+		}
+		else if (!lua_isnil(luaStatePointer, 2))
+		{
+			CoronaLuaError(luaStatePointer, "2nd argument must be a Lua function or nil.");
+			lua_pushboolean(luaStatePointer, 0);
+			return 1;
+		}
+	}
+
+	// Request a drop from Steam's Inventory service.
+	SteamInventoryResult_t resultHandle = k_SteamInventoryResultInvalid;
+	bool wasSuccessful = steamInventoryPointer->TriggerItemDrop(&resultHandle, dropListDefinition);
+
+	// Register a listener for this request, if provided.
+	if (wasSuccessful && (resultHandle != k_SteamInventoryResultInvalid) && luaListenerStackIndex)
+	{
+		auto luaEventDispatcherPointer = std::make_shared<LuaEventDispatcher>(luaStatePointer);
+		luaEventDispatcherPointer->AddEventListener(
+				luaStatePointer,
+				DispatchInventoryResultReadyEventTask::kLuaEventName,
+				luaListenerStackIndex);
+		contextPointer->RegisterInventoryResultListener(resultHandle, luaEventDispatcherPointer);
+	}
+
+	lua_pushboolean(luaStatePointer, wasSuccessful ? 1 : 0);
+	return 1;
+}
+
+/** bool steamworks.getAllItems([listener]) */
+int OnGetAllItems(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch this plugin's runtime context associated with the calling Lua state.
+	auto contextPointer = (RuntimeContext*)lua_touserdata(luaStatePointer, lua_upvalueindex(1));
+	if (!contextPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the optional listener function.
+	int luaListenerStackIndex = 0;
+	if (lua_gettop(luaStatePointer) >= 1)
+	{
+		if (lua_isfunction(luaStatePointer, 1))
+		{
+			luaListenerStackIndex = 1;
+		}
+		else if (!lua_isnil(luaStatePointer, 1) && (lua_type(luaStatePointer, 1) != LUA_TNONE))
+		{
+			CoronaLuaError(luaStatePointer, "1st argument must be a Lua function or nil.");
+			lua_pushboolean(luaStatePointer, 0);
+			return 1;
+		}
+	}
+
+	// Request all inventory items from Steam.
+	SteamInventoryResult_t resultHandle = k_SteamInventoryResultInvalid;
+	bool wasSuccessful = steamInventoryPointer->GetAllItems(&resultHandle);
+
+	// Register a listener for this request, if provided.
+	if (wasSuccessful && (resultHandle != k_SteamInventoryResultInvalid) && luaListenerStackIndex)
+	{
+		auto luaEventDispatcherPointer = std::make_shared<LuaEventDispatcher>(luaStatePointer);
+		luaEventDispatcherPointer->AddEventListener(
+				luaStatePointer,
+				DispatchInventoryResultReadyEventTask::kLuaEventName,
+				luaListenerStackIndex);
+		contextPointer->RegisterInventoryResultListener(resultHandle, luaEventDispatcherPointer);
+	}
+
+	lua_pushboolean(luaStatePointer, wasSuccessful ? 1 : 0);
+	return 1;
+}
+
+/** bool steamworks.getItemsByID(itemInstanceIds, [listener]) */
+int OnGetItemsByID(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch this plugin's runtime context associated with the calling Lua state.
+	auto contextPointer = (RuntimeContext*)lua_touserdata(luaStatePointer, lua_upvalueindex(1));
+	if (!contextPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the required item instance IDs table argument.
+	if (!lua_istable(luaStatePointer, 1))
+	{
+		CoronaLuaError(luaStatePointer, "1st argument must be a table of item instance IDs.");
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	std::vector<SteamItemInstanceID_t> instanceIds;
+	{
+		lua_pushnil(luaStatePointer);
+		while (lua_next(luaStatePointer, 1) != 0)
+		{
+			SteamItemInstanceID_t nextId = 0;
+			if (lua_type(luaStatePointer, -1) == LUA_TSTRING)
+			{
+				const char* idString = lua_tostring(luaStatePointer, -1);
+				std::stringstream stringStream;
+				stringStream.imbue(std::locale::classic());
+				stringStream << idString;
+				stringStream >> nextId;
+			}
+			else if (lua_type(luaStatePointer, -1) == LUA_TNUMBER)
+			{
+				nextId = (SteamItemInstanceID_t)lua_tointeger(luaStatePointer, -1);
+			}
+			else
+			{
+				CoronaLuaError(luaStatePointer, "Item instance IDs must be strings or numbers.");
+				lua_pop(luaStatePointer, 2);
+				lua_pushboolean(luaStatePointer, 0);
+				return 1;
+			}
+
+			if (nextId != 0)
+			{
+				instanceIds.push_back(nextId);
+			}
+			lua_pop(luaStatePointer, 1);
+		}
+	}
+
+	if (instanceIds.empty())
+	{
+		CoronaLuaError(luaStatePointer, "Item instance IDs table cannot be empty.");
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the optional listener function.
+	int luaListenerStackIndex = 0;
+	if (lua_gettop(luaStatePointer) >= 2)
+	{
+		if (lua_isfunction(luaStatePointer, 2))
+		{
+			luaListenerStackIndex = 2;
+		}
+		else if (!lua_isnil(luaStatePointer, 2))
+		{
+			CoronaLuaError(luaStatePointer, "2nd argument must be a Lua function or nil.");
+			lua_pushboolean(luaStatePointer, 0);
+			return 1;
+		}
+	}
+
+	// Request the items by instance ID.
+	SteamInventoryResult_t resultHandle = k_SteamInventoryResultInvalid;
+	bool wasSuccessful = steamInventoryPointer->GetItemsByID(
+			&resultHandle, instanceIds.data(), (uint32)instanceIds.size());
+
+	// Register a listener for this request, if provided.
+	if (wasSuccessful && (resultHandle != k_SteamInventoryResultInvalid) && luaListenerStackIndex)
+	{
+		auto luaEventDispatcherPointer = std::make_shared<LuaEventDispatcher>(luaStatePointer);
+		luaEventDispatcherPointer->AddEventListener(
+				luaStatePointer,
+				DispatchInventoryResultReadyEventTask::kLuaEventName,
+				luaListenerStackIndex);
+		contextPointer->RegisterInventoryResultListener(resultHandle, luaEventDispatcherPointer);
+	}
+
+	lua_pushboolean(luaStatePointer, wasSuccessful ? 1 : 0);
+	return 1;
+}
+
+/** table steamworks.getInventoryResultItems(resultHandle) */
+int OnGetInventoryResultItems(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch the result handle argument.
+	if (lua_type(luaStatePointer, 1) != LUA_TNUMBER)
+	{
+		CoronaLuaError(luaStatePointer, "1st argument must be a numeric 'resultHandle'.");
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+	auto resultHandle = (SteamInventoryResult_t)lua_tointeger(luaStatePointer, 1);
+	if (resultHandle == k_SteamInventoryResultInvalid)
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	// Fetch the item count first.
+	uint32 itemCount = 0;
+	if (!steamInventoryPointer->GetResultItems(resultHandle, nullptr, &itemCount))
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	std::vector<SteamItemDetails_t> items;
+	if (itemCount > 0)
+	{
+		items.resize(itemCount);
+		if (!steamInventoryPointer->GetResultItems(resultHandle, items.data(), &itemCount))
+		{
+			lua_pushnil(luaStatePointer);
+			return 1;
+		}
+	}
+
+	// Push the items to Lua.
+	lua_createtable(luaStatePointer, (int)itemCount, 0);
+	for (uint32 itemIndex = 0; itemIndex < itemCount; itemIndex++)
+	{
+		lua_createtable(luaStatePointer, 0, 4);
+		{
+			lua_pushinteger(luaStatePointer, items[itemIndex].m_iDefinition);
+			lua_setfield(luaStatePointer, -2, "itemDefId");
+		}
+		{
+			lua_pushinteger(luaStatePointer, items[itemIndex].m_unQuantity);
+			lua_setfield(luaStatePointer, -2, "quantity");
+		}
+		{
+			lua_pushinteger(luaStatePointer, items[itemIndex].m_unFlags);
+			lua_setfield(luaStatePointer, -2, "flags");
+		}
+		{
+			std::stringstream stringStream;
+			stringStream.imbue(std::locale::classic());
+			stringStream << items[itemIndex].m_itemId;
+			auto stringResult = stringStream.str();
+			lua_pushstring(luaStatePointer, stringResult.c_str());
+			lua_setfield(luaStatePointer, -2, "instanceId");
+		}
+		lua_rawseti(luaStatePointer, -2, (int)itemIndex + 1);
+	}
+	return 1;
+}
+
+/** string steamworks.getResultItemProperty(resultHandle, itemIndex, [propertyName]) */
+int OnGetResultItemProperty(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch the result handle argument.
+	if (lua_type(luaStatePointer, 1) != LUA_TNUMBER)
+	{
+		CoronaLuaError(luaStatePointer, "1st argument must be a numeric 'resultHandle'.");
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+	auto resultHandle = (SteamInventoryResult_t)lua_tointeger(luaStatePointer, 1);
+	if (resultHandle == k_SteamInventoryResultInvalid)
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	// Fetch the item index argument.
+	if (lua_type(luaStatePointer, 2) != LUA_TNUMBER)
+	{
+		CoronaLuaError(luaStatePointer, "2nd argument must be a numeric 'itemIndex'.");
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+	auto itemIndex = (uint32)lua_tointeger(luaStatePointer, 2);
+
+	// Fetch the optional property name.
+	const char* propertyName = nullptr;
+	if (lua_gettop(luaStatePointer) >= 3)
+	{
+		if (lua_type(luaStatePointer, 3) == LUA_TSTRING)
+		{
+			propertyName = lua_tostring(luaStatePointer, 3);
+		}
+		else if (!lua_isnil(luaStatePointer, 3))
+		{
+			CoronaLuaError(luaStatePointer, "3rd argument must be a string or nil.");
+			lua_pushnil(luaStatePointer);
+			return 1;
+		}
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	// Fetch the value size first, then the value string.
+	uint32 valueBufferSize = 0;
+	if (!steamInventoryPointer->GetResultItemProperty(
+				resultHandle, itemIndex, propertyName, nullptr, &valueBufferSize))
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+	if (valueBufferSize <= 1)
+	{
+		lua_pushstring(luaStatePointer, "");
+		return 1;
+	}
+
+	std::vector<char> valueBuffer(valueBufferSize);
+	if (!steamInventoryPointer->GetResultItemProperty(
+				resultHandle, itemIndex, propertyName, valueBuffer.data(), &valueBufferSize))
+	{
+		lua_pushnil(luaStatePointer);
+		return 1;
+	}
+
+	lua_pushstring(luaStatePointer, valueBuffer.data());
+	return 1;
+}
+
+/** bool steamworks.destroyInventoryResult(resultHandle) */
+int OnDestroyInventoryResult(lua_State* luaStatePointer)
+{
+	// Validate.
+	if (!luaStatePointer)
+	{
+		return 0;
+	}
+
+	// Fetch the result handle argument.
+	if (lua_type(luaStatePointer, 1) != LUA_TNUMBER)
+	{
+		CoronaLuaError(luaStatePointer, "1st argument must be a numeric 'resultHandle'.");
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+	auto resultHandle = (SteamInventoryResult_t)lua_tointeger(luaStatePointer, 1);
+	if (resultHandle == k_SteamInventoryResultInvalid)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	// Fetch the Steam interface needed by this API call.
+	auto steamInventoryPointer = SteamInventory();
+	if (!steamInventoryPointer)
+	{
+		lua_pushboolean(luaStatePointer, 0);
+		return 1;
+	}
+
+	steamInventoryPointer->DestroyResult(resultHandle);
+	lua_pushboolean(luaStatePointer, 1);
 	return 1;
 }
 
@@ -3264,6 +3702,12 @@ CORONA_EXPORT int luaopen_plugin_steamworks(lua_State* luaStatePointer)
 			{ "newImageRect", OnNewImageRect },
 			{ "newTexture", OnNewTexture },
 			{ "requestActivePlayerCount", OnRequestActivePlayerCount },
+			{ "triggerItemDrop", OnTriggerItemDrop },
+			{ "getAllItems", OnGetAllItems },
+			{ "getItemsByID", OnGetItemsByID },
+			{ "getInventoryResultItems", OnGetInventoryResultItems },
+			{ "getResultItemProperty", OnGetResultItemProperty },
+			{ "destroyInventoryResult", OnDestroyInventoryResult },
 			{ "requestLeaderboardEntries", OnRequestLeaderboardEntries },
 			{ "requestLeaderboardInfo", OnRequestLeaderboardInfo },
 			{ "requestSetHighScore", OnRequestSetHighScore },

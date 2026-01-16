@@ -209,6 +209,24 @@ class DispatchMicrotransactionAuthorizationResponseEventTask : public BaseDispat
 		uint64_t fOrderId;
 };
 
+/** Dispatches a Steam "SteamInventoryResultReady_t" event and its data to Lua. */
+class DispatchInventoryResultReadyEventTask : public BaseDispatchEventTask
+{
+	public:
+		static const char kLuaEventName[];
+
+		DispatchInventoryResultReadyEventTask();
+		virtual ~DispatchInventoryResultReadyEventTask();
+
+		void AcquireEventDataFrom(const SteamInventoryResultReady_t& steamEventData);
+		virtual const char* GetLuaEventName() const;
+		virtual bool PushLuaEventTableTo(lua_State* luaStatePointer) const;
+
+	private:
+		SteamInventoryResult_t fResultHandle;
+		EResult fResultCode;
+};
+
 
 /** Dispatches a Steam "NumberOfCurrentPlayers_t" event and its data to Lua. */
 class DispatchNumberOfCurrentPlayersEventTask : public BaseDispatchCallResultEventTask
