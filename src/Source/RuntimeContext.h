@@ -188,6 +188,14 @@ class RuntimeContext
 		/** Adds auth ticket to cancel queue */
 		void AddAuthTicket(HAuthTicket ticket);
 
+		/** Registers a Lua event dispatcher for a pending inventory result handle. */
+		void RegisterInventoryResultListener(
+				SteamInventoryResult_t resultHandle,
+				const std::shared_ptr<LuaEventDispatcher>& dispatcherPointer);
+
+		/** Removes and returns the Lua event dispatcher associated with the given inventory result handle. */
+		std::shared_ptr<LuaEventDispatcher> RemoveInventoryResultListener(SteamInventoryResult_t resultHandle);
+
 	private:
 		/** Copy constructor deleted to prevent it from being called. */
 		RuntimeContext(const RuntimeContext&) = delete;
@@ -238,6 +246,7 @@ class RuntimeContext
 		STEAM_CALLBACK(RuntimeContext, OnSteamGameOverlayActivated, GameOverlayActivated_t);
 		STEAM_CALLBACK(RuntimeContext, OnGetAuthSessionTicketResponse, GetAuthSessionTicketResponse_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamMicrotransactionAuthorizationReceived, MicroTxnAuthorizationResponse_t);
+		STEAM_CALLBACK(RuntimeContext, OnSteamInventoryResultReady, SteamInventoryResultReady_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamPersonaStateChanged, PersonaStateChange_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamUserAchievementIconFetched, UserAchievementIconFetched_t);
 		STEAM_CALLBACK(RuntimeContext, OnSteamUserAchievementStored, UserAchievementStored_t);
@@ -274,6 +283,10 @@ class RuntimeContext
 		  Steam "LeaderboardFindResult_t" event has been received.
 		 */
 		std::unordered_map<std::string, SteamLeaderboard_t> fLeaderboardNameHandleMap;
+
+		/** Maps inventory result handles to their dedicated Lua event dispatchers. */
+		std::unordered_map<SteamInventoryResult_t, std::shared_ptr<LuaEventDispatcher>>
+				fInventoryResultDispatcherMap;
 
 		/** Stores a collection of Steam user IDs (in integer form) that are subscribed to large avatars. */
 		std::unordered_set<uint64> fLargeAvatarSubscribedUserIdSet;

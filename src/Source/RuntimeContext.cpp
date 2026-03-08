@@ -98,6 +98,29 @@ void RuntimeContext::AddAuthTicket(HAuthTicket ticket)
 	}
 }
 
+void RuntimeContext::RegisterInventoryResultListener(
+		SteamInventoryResult_t resultHandle,
+		const std::shared_ptr<LuaEventDispatcher>& dispatcherPointer)
+{
+	if ((resultHandle != k_SteamInventoryResultInvalid) && dispatcherPointer)
+	{
+		fInventoryResultDispatcherMap[resultHandle] = dispatcherPointer;
+	}
+}
+
+std::shared_ptr<LuaEventDispatcher> RuntimeContext::RemoveInventoryResultListener(
+		SteamInventoryResult_t resultHandle)
+{
+	auto iterator = fInventoryResultDispatcherMap.find(resultHandle);
+	if (iterator != fInventoryResultDispatcherMap.end())
+	{
+		auto dispatcherPointer = iterator->second;
+		fInventoryResultDispatcherMap.erase(iterator);
+		return dispatcherPointer;
+	}
+	return std::shared_ptr<LuaEventDispatcher>();
+}
+
 std::shared_ptr<LuaEventDispatcher> RuntimeContext::GetLuaEventDispatcher() const
 {
 	return fLuaEventDispatcherPointer;
@@ -367,6 +390,34 @@ void RuntimeContext::OnSteamMicrotransactionAuthorizationReceived(MicroTxnAuthor
 {
 	OnHandleGlobalSteamEvent<
 			MicroTxnAuthorizationResponse_t, DispatchMicrotransactionAuthorizationResponseEventTask>(eventDataPointer);
+}
+
+void RuntimeContext::OnSteamInventoryResultReady(SteamInventoryResultReady_t* eventDataPointer)
+{
+	// Validate.
+	if (!eventDataPointer)
+	{
+		return;
+	}
+
+	// Create and configure the event dispatcher task.
+	auto taskPointer = new DispatchInventoryResultReadyEventTask();
+	if (!taskPointer)
+	{
+		return;
+	}
+
+	// Use a per-request listener if registered; otherwise use the global dispatcher.
+	auto dispatcherPointer = RemoveInventoryResultListener(eventDataPointer->m_handle);
+	if (!dispatcherPointer)
+	{
+		dispatcherPointer = fLuaEventDispatcherPointer;
+	}
+	taskPointer->SetLuaEventDispatcher(dispatcherPointer);
+	taskPointer->AcquireEventDataFrom(*eventDataPointer);
+
+	// Queue the received Steam event data to be dispatched to Lua later.
+	fDispatchEventTaskQueue.push(std::shared_ptr<BaseDispatchEventTask>(taskPointer));
 }
 
 void RuntimeContext::OnSteamPersonaStateChanged(PersonaStateChange_t* eventDataPointer)
