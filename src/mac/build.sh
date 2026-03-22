@@ -5,9 +5,9 @@ set -e
 path=`dirname $0`
 
 
-xcodebuild -project "$path/Plugin.xcodeproj" -configuration Release clean
+xcodebuild -project "$path/Plugin.xcodeproj" -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean
 
-xcodebuild -project "$path/Plugin.xcodeproj" -configuration Release
+xcodebuild -project "$path/Plugin.xcodeproj" -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
 OUTPUT="$path/out"
 mkdir -p "$OUTPUT"

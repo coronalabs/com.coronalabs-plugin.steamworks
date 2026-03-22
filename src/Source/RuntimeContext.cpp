@@ -11,7 +11,9 @@
 #include "CoronaLua.h"
 #include "DispatchEventTask.h"
 #include "SteamCallResultHandler.h"
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <exception>
 #include <memory>
 #include <unordered_set>
@@ -45,6 +47,7 @@ RuntimeContext::RuntimeContext(lua_State* luaStatePointer)
 		}
 	}
 
+#ifdef _WIN32
 	// Try to detect Steam Deck and set defaultWindowMode to "fullScreen" when detected
 	HMODULE hntdll = GetModuleHandle(L"ntdll.dll");
 	if (hntdll)
@@ -55,6 +58,7 @@ RuntimeContext::RuntimeContext(lua_State* luaStatePointer)
 			fIsProton = true;
 		}
 	}
+#endif
 
 	// Create a Lua EventDispatcher object.
 	// Used to dispatch global events to listeners
